@@ -1,0 +1,5 @@
+build
+node_modules
+contracts/test
+start_geth
+pw

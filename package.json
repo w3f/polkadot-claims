@@ -1,0 +1,28 @@
+{
+  "devDependencies": {
+    "@polkadot/keyring": "^0.90.1",
+    "@polkadot/util": "^0.90.1",
+    "chai": "^4.2.0",
+    "truffle": "^5.0.18"
+  },
+  "name": "polkadot-claims",
+  "description": "A smart contract that allows the Ethereum address associated with a DOT allocation to claim that allocation to a specified Polkadot address.",
+  "version": "0.0.1",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "truffle test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lsaether/claims.git"
+  },
+  "author": "Web3 Foundation",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lsaether/claims/issues"
+  },
+  "homepage": "https://github.com/lsaether/claims#readme"
+}
