@@ -8,9 +8,9 @@ import "./FrozenToken.sol";
 contract Claims is Owned {
 
     struct Claim {
-        bool    hasIndex;   // Has the index been set?
         uint    index;      // Index for short address.
         bytes32 polkadot;   // Polkadot public key.
+        bool    hasIndex;   // Has the index been set?
         bool    vested;     // Is this allocation vested?
     }
 
