@@ -39,6 +39,9 @@ contract Claims is Owned {
     event Vested(address indexed eth);
 
     constructor(address _owner, address _allocations) public {
+        require(_owner != address(0x0), "Must provide an owner address");
+        require(_allocations != address(0x0), "Must provide an allocations address");
+        
         owner = _owner;
         allocationIndicator = FrozenToken(_allocations);
     }
