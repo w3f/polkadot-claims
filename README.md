@@ -17,3 +17,21 @@ Clone the repository locally and run the following commands.
 yarn
 yarn test
 ```
+
+## Set-up state locally
+
+In one terminal window:
+
+```
+$ ./startgeth.sh
+```
+
+In another terminal window:
+
+```
+$ yarn priv:deploy
+$ node scripts/distribute.js
+```
+
+The script will mint frozenToken to 100 random addresses and make it so every other (index % 2) address will send a claim transaction. Private keys for these random addresses will be printed to a `privateKeys` text file and can be copied into Metamask or elsewhere.
+
