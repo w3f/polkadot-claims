@@ -13,6 +13,8 @@
     "test": "test"
   },
   "scripts": {
+    "goerli:deploy": "truffle migrate --f 2 --network goerli --reset --compile-all",
+    "priv:deploy": "truffle migrate --f 2 --network priv --reset --compile-all",
     "test": "truffle test"
   },
   "repository": {
@@ -24,5 +26,9 @@
   "bugs": {
     "url": "https://github.com/lsaether/claims/issues"
   },
-  "homepage": "https://github.com/lsaether/claims#readme"
+  "homepage": "https://github.com/lsaether/claims#readme",
+  "dependencies": {
+    "truffle-hdwallet-provider": "^1.0.11",
+    "web3": "1.0.0-beta.34"
+  }
 }

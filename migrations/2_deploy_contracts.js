@@ -1,7 +1,11 @@
 const Claims = artifacts.require('Claims');
 const FrozenToken = artifacts.require('FrozenToken');
 
-module.exports = (deployer) => {
-  // deployer.deploy(FrozenToken);
-  // deployer.deploy(Claims);
+module.exports = async (deployer) => {
+  try {
+    console.log('here');
+    const accounts = await web3.eth.getAccounts();
+    await deployer.deploy(FrozenToken, 100, accounts[0]);
+    await deployer.deploy(Claims, accounts[0], FrozenToken.address);
+  } catch (e) { console.error(e); }
 }
