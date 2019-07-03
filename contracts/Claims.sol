@@ -8,9 +8,9 @@ import "./FrozenToken.sol";
 contract Claims is Owned {
 
     struct Claim {
-        bool    hasIndex;   // Has the index been set?
         uint    index;      // Index for short address.
         bytes32 polkadot;   // Polkadot public key.
+        bool    hasIndex;   // Has the index been set?
         bool    vested;     // Is this allocation vested?
     }
 
@@ -39,6 +39,9 @@ contract Claims is Owned {
     event Vested(address indexed eth);
 
     constructor(address _owner, address _allocations) public {
+        require(_owner != address(0x0), "Must provide an owner address");
+        require(_allocations != address(0x0), "Must provide an allocations address");
+
         owner = _owner;
         allocationIndicator = FrozenToken(_allocations);
     }
@@ -57,6 +60,7 @@ contract Claims is Owned {
         );
 
         for (uint i = 0; i < _amends.length; i++) {
+            if (gasleft() < 80000) { break; }
             require(!hasClaimed(_origs[i]), "Address has already claimed");
             amended[_origs[i]] = _amends[i];
             emit Amended(_origs[i], _amends[i]);
@@ -70,6 +74,7 @@ contract Claims is Owned {
         only_owner
     {
         for (uint i = 0; i < _eths.length; i++) {
+            if (gasleft() < 80000) { break; }
             Claim storage claimData = claims[_eths[i]];
             require(!hasClaimed(_eths[i]), "Account must not be claimed");
             require(!claimData.vested, "Account must not be vested already");
@@ -86,6 +91,7 @@ contract Claims is Owned {
         external returns (bool)
     {
         for (uint i = 0; i < _eths.length; i++) {
+            if (gasleft() < 80000) { return false; }
             assignNextIndex(_eths[i]);
         }
         return true;

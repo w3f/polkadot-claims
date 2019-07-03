@@ -15,6 +15,7 @@
   "scripts": {
     "goerli:deploy": "truffle migrate --f 2 --network goerli --reset --compile-all",
     "priv:deploy": "truffle migrate --f 2 --network priv --reset --compile-all",
+    "build": "truffle build",
     "test": "truffle test"
   },
   "repository": {
