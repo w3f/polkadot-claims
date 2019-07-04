@@ -36,12 +36,16 @@ const myUtils = require('./utils.js');
     myAccounts.push(account);
     fs.appendFileSync('./data', JSON.stringify(account));
     fs.appendFileSync('./addresses', account.address);
-    distributionPromise.push(
-      frozenToken.methods.transfer(account.address, '1').send({
-        from: sender,
-        gas: '333333',
-      }).on('transactionHash', (hash) => fs.appendFileSync('./txHashes', hash))
-    );
+    if (n < 100) {
+      distributionPromise.push(
+        frozenToken.methods.transfer(account.address, '1').send({
+          from: sender,
+          gas: '333333',
+        }).on('transactionHash', (hash) => fs.appendFileSync('./txHashes', hash))
+      );
+    } else {
+      fs.appendFileSync('testAllocations.csv')
+    }
     n--;
   }
 
@@ -55,8 +59,9 @@ const myUtils = require('./utils.js');
         from: sender,
         to: account.address,
         value: '10000000000000000000', 
-      })
+      });
 
+    
       const dot = myUtils.decodeToPubKey(myUtils.getPolkadotAddress(account.address.slice(0, 14)));
       const data = claims.methods.claim(account.address, dot).encodeABI();
 
@@ -67,6 +72,8 @@ const myUtils = require('./utils.js');
       });
 
       return web3.eth.sendSignedTransaction(rawTx.rawTransaction).on('receipt', console.log);
+    } else {
+      fs.appendFileSync('testVesting.csv', account.address +',');
     }
   }));
 
