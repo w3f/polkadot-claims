@@ -86,12 +86,11 @@ contract Claims is Owned {
     /// @param _eths An array of allocation addresses to assign indices for.
     /// @return bool True is successful.
     function assignIndices(address[] calldata _eths)
-        external returns (bool)
+        external
     {
         for (uint i = 0; i < _eths.length; i++) {
-            assignNextIndex(_eths[i]);
+            require(assignNextIndex(_eths[i]), "Assigning the next index failed");
         }
-        return true;
     }
 
     /// Claims an allocation associated with an `_eth` address to a `_dot` public key.
@@ -103,7 +102,6 @@ contract Claims is Owned {
         external
         has_allocation(_eth)
         not_claimed(_eth)
-        returns (bool)
     {
         require(_dot != bytes32(0), "Failed to provide a Polkadot public key");
         
@@ -114,14 +112,13 @@ contract Claims is Owned {
         }
 
         if (claims[_eth].index == 0 && !claims[_eth].hasIndex) {
-            assignNextIndex(_eth);
+            require(assignNextIndex(_eth), "Assigning the next index failed");
         }
 
         claims[_eth].polkadot = _dot;
         claimed.push(_eth);
 
         emit Claimed(_eth, _dot, claims[_eth].index);
-        return true;
     }
 
     /// Get the length of `claimed`.
