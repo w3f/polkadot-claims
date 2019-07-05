@@ -28,7 +28,7 @@ const myUtils = require('./utils.js');
   console.log(await frozenToken.methods.balanceOf(sender).call());
 
   // First do distribution of all 100 tokens.
-  let n = 100;
+  let n = 150;
   let myAccounts = [];
   let distributionPromise = [];
   while (n > 0) {
@@ -44,7 +44,7 @@ const myUtils = require('./utils.js');
         }).on('transactionHash', (hash) => fs.appendFileSync('./txHashes', hash))
       );
     } else {
-      fs.appendFileSync('testAllocations.csv')
+      fs.appendFileSync('testAllocations.csv', account.address+','+'1'+'\n');
     }
     n--;
   }
@@ -74,6 +74,10 @@ const myUtils = require('./utils.js');
       return web3.eth.sendSignedTransaction(rawTx.rawTransaction).on('receipt', console.log);
     } else {
       fs.appendFileSync('testVesting.csv', account.address +',');
+      fs.appendFileSync('testIndices.csv', account.address +',');
+      const amendedAccount = web3.eth.accounts.create();
+      fs.appendFileSync('testAmends.csv', account.address+','+amendedAccount.address+'\n');
+
     }
   }));
 

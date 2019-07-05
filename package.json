@@ -13,6 +13,7 @@
     "test": "test"
   },
   "scripts": {
+    "clean": "rm *.csv data addresses privateKeys txHashes",
     "goerli:deploy": "truffle migrate --f 2 --network goerli --reset --compile-all",
     "priv:deploy": "truffle migrate --f 2 --network priv --reset --compile-all",
     "build": "truffle build",
