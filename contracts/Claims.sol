@@ -11,7 +11,7 @@ contract Claims is Owned {
         uint    index;      // Index for short address.
         bytes32 polkadot;   // Polkadot public key.
         bool    hasIndex;   // Has the index been set?
-        bool    vested;     // Is this allocation vested?
+        uint    vested;     // How much of the allocation is vested.
     }
 
     // The address of the allocation indicator contract.
@@ -68,15 +68,18 @@ contract Claims is Owned {
 
     /// Allows owner to manually toggle vesting onto allocations.
     /// @param _eths The addresses for which to set vesting.
-    function setVesting(address[] calldata _eths)
+    /// @param _vestingAmts The amounts that the accounts are vested.
+    function setVesting(address[] calldata _eths, uint[] calldata _vestingAmts)
         external
         only_owner
     {
+        require(_eths.length == _vestingAmts.length, "Must submit arrays of equal length");
+        
         for (uint i = 0; i < _eths.length; i++) {
             Claim storage claimData = claims[_eths[i]];
             require(!hasClaimed(_eths[i]), "Account must not be claimed");
-            require(!claimData.vested, "Account must not be vested already");
-            claimData.vested = true;
+            require(claimData.vested == 0, "Account must not be vested already");
+            claimData.vested = _vestingAmts[i];
             emit Vested(_eths[i]);
         }
     }
