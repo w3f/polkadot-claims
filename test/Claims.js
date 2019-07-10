@@ -10,6 +10,9 @@ const { decodeAddress } = require('@polkadot/keyring');
 // Turn ON / OFF logging
 const NOISY = false;
 
+// A dummy key used for testing.
+const ranKey = web3.utils.randomHex(32);
+
 const assertRevert = async (transaction, expectedErr) => {
   try {
     const res = await transaction
@@ -160,7 +163,7 @@ contract('Claims', accounts => {
     const pAddr = getPolkadotAddress('Alice');
     const decoded = u8aToHex(decodeAddress(pAddr));
     await assertRevert(
-      claims.claim(accounts[1], decoded, { from: accounts[0] }),
+      claims.claim(accounts[1], decoded, ranKey, { from: accounts[0] }),
       "Sender is not the allocation address"
     );
   });
@@ -168,7 +171,7 @@ contract('Claims', accounts => {
   it('Allows an allocation address claim to Polkadot address', async () => {
     const pAddr = getPolkadotAddress('Alice');
     const decoded = u8aToHex(decodeAddress(pAddr));
-    const txResult = await claims.claim(accounts[3], decoded, { from: accounts[3] });
+    const txResult = await claims.claim(accounts[3], decoded, ranKey, { from: accounts[3] });
     expect(txResult.receipt).to.exist;
     const event = findEventFromReceipt(txResult.receipt, 'Claimed');
     expect(event).to.exist;
@@ -185,7 +188,7 @@ contract('Claims', accounts => {
   it('Allows the accounts assigned 0 index to claim', async () => {
     const pAddr = getPolkadotAddress('Charlie');
     const decoded = u8aToHex(decodeAddress(pAddr));
-    const txResult = await claims.claim(accounts[1], decoded, { from: accounts[1] });
+    const txResult = await claims.claim(accounts[1], decoded, ranKey, { from: accounts[1] });
     expect(txResult.receipt).to.exist;
     const event = findEventFromReceipt(txResult.receipt, 'Claimed');
     expect(event).to.exist;
@@ -217,7 +220,7 @@ contract('Claims', accounts => {
     const pAddr = getPolkadotAddress('Bob');
     const decoded = u8aToHex(decodeAddress(pAddr));
     await assertRevert(
-      claims.claim(accounts[1], decoded, { from: accounts[1] }),
+      claims.claim(accounts[1], decoded, ranKey, { from: accounts[1] }),
       'Account has already claimed'
     );
   });
@@ -271,7 +274,7 @@ contract('Claims', accounts => {
     const decoded = u8aToHex(decodeAddress(pAddr));
 
     await assertRevert(
-      claims.claim(accounts[2], decoded, { from: accounts[6] }),
+      claims.claim(accounts[2], decoded, ranKey, { from: accounts[6] }),
       'Address is amended and sender is not the amendment'
     );
   });
@@ -294,7 +297,7 @@ contract('Claims', accounts => {
   it('Allows an amended address to claim to Polkadot address', async () => {
     const pAddr = getPolkadotAddress('Bob');
     const decoded = u8aToHex(decodeAddress(pAddr));
-    const txResult = await claims.claim(accounts[2], decoded, { from: accounts[4] });
+    const txResult = await claims.claim(accounts[2], decoded, ranKey, { from: accounts[4] });
     expect(txResult.receipt).to.exist;
     const event = findEventFromReceipt(txResult.receipt, 'Claimed');
     expect(event).to.exist;

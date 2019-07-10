@@ -8,10 +8,11 @@ import "./FrozenToken.sol";
 contract Claims is Owned {
 
     struct Claim {
-        uint    index;      // Index for short address.
-        bytes32 polkadot;   // Polkadot public key.
-        bool    hasIndex;   // Has the index been set?
-        uint    vested;     // How much of the allocation is vested.
+        uint    index;          // Index for short address.
+        bytes32 polkadot;       // Polkadot public key.
+        bool    hasIndex;       // Has the index been set?
+        uint    vested;         // How much of the allocation is vested.
+        bytes32 vestedKey; // Polkadot public key for vested balance.
     }
 
     // The address of the allocation indicator contract.
@@ -74,7 +75,7 @@ contract Claims is Owned {
         only_owner
     {
         require(_eths.length == _vestingAmts.length, "Must submit arrays of equal length");
-        
+
         for (uint i = 0; i < _eths.length; i++) {
             Claim storage claimData = claims[_eths[i]];
             require(!hasClaimed(_eths[i]), "Account must not be claimed");
@@ -100,13 +101,18 @@ contract Claims is Owned {
     /// @dev Can only be called by the `_eth` address or the amended address for the allocation.
     /// @param _eth The allocation address to claim.
     /// @param _dot The Polkadot public key to claim.
+    /// @param _vestedKey The public key for vesting allocation claim.
     /// @return True if successful.
-    function claim(address _eth, bytes32 _dot)
+    function claim(address _eth, bytes32 _dot, bytes32 _vestedKey)
         external
         has_allocation(_eth)
         not_claimed(_eth)
     {
         require(_dot != bytes32(0), "Failed to provide a Polkadot public key");
+        require(
+            claims[_eth].vested == 0 || _vestedKey != bytes32(0),
+            "Either no vested allocation or a vested key must have been provided" 
+        );
         
         if (amended[_eth] != address(0x0)) {
             require(amended[_eth] == msg.sender, "Address is amended and sender is not the amendment");
@@ -119,6 +125,7 @@ contract Claims is Owned {
         }
 
         claims[_eth].polkadot = _dot;
+        claims[_eth].vestedKey = _vestedKey;
         claimed.push(_eth);
 
         emit Claimed(_eth, _dot, claims[_eth].index);
