@@ -12,7 +12,7 @@ contract Claims is Owned {
         bytes32 polkadot;       // Polkadot public key.
         bool    hasIndex;       // Has the index been set?
         uint    vested;         // How much of the allocation is vested.
-        bytes32 vestedKey; // Polkadot public key for vested balance.
+        bytes32 vestedKey;      // Polkadot public key for vested balance.
     }
 
     // The address of the allocation indicator contract.
