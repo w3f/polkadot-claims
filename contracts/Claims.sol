@@ -125,7 +125,12 @@ contract Claims is Owned {
         }
 
         claims[_eth].polkadot = _dot;
-        claims[_eth].vestedKey = _vestedKey;
+
+        if (claims[_eth].vested > 0) {
+            // Only make this storage call if there is a vested balance.
+            claims[_eth].vestedKey = _vestedKey;
+        }
+        
         claimed.push(_eth);
 
         emit Claimed(_eth, _dot, claims[_eth].index);
