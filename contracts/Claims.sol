@@ -37,7 +37,7 @@ contract Claims is Owned {
     // Event for when an index is assigned to an allocation.
     event IndexAssigned(address indexed eth, uint indexed idx);
     // Event for when vesting is set on an allocation.
-    event Vested(address indexed eth);
+    event Vested(address indexed eth, uint amount);
 
     constructor(address _owner, address _allocations) public {
         require(_owner != address(0x0), "Must provide an owner address");
@@ -81,7 +81,7 @@ contract Claims is Owned {
             require(!hasClaimed(_eths[i]), "Account must not be claimed");
             require(claimData.vested == 0, "Account must not be vested already");
             claimData.vested = _vestingAmts[i];
-            emit Vested(_eths[i]);
+            emit Vested(_eths[i], _vestingAmts[i]);
         }
     }
 
