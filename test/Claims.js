@@ -10,6 +10,9 @@ const { decodeAddress } = require('@polkadot/keyring');
 // Turn ON / OFF logging
 const NOISY = false;
 
+// A dummy key used for testing.
+const ranKey = web3.utils.randomHex(32);
+
 const assertRevert = async (transaction, expectedErr) => {
   try {
     const res = await transaction
@@ -160,7 +163,7 @@ contract('Claims', accounts => {
     const pAddr = getPolkadotAddress('Alice');
     const decoded = u8aToHex(decodeAddress(pAddr));
     await assertRevert(
-      claims.claim(accounts[1], decoded, { from: accounts[0] }),
+      claims.claim(accounts[1], decoded, ranKey, { from: accounts[0] }),
       "Sender is not the allocation address"
     );
   });
@@ -168,7 +171,7 @@ contract('Claims', accounts => {
   it('Allows an allocation address claim to Polkadot address', async () => {
     const pAddr = getPolkadotAddress('Alice');
     const decoded = u8aToHex(decodeAddress(pAddr));
-    const txResult = await claims.claim(accounts[3], decoded, { from: accounts[3] });
+    const txResult = await claims.claim(accounts[3], decoded, ranKey, { from: accounts[3] });
     expect(txResult.receipt).to.exist;
     const event = findEventFromReceipt(txResult.receipt, 'Claimed');
     expect(event).to.exist;
@@ -185,7 +188,7 @@ contract('Claims', accounts => {
   it('Allows the accounts assigned 0 index to claim', async () => {
     const pAddr = getPolkadotAddress('Charlie');
     const decoded = u8aToHex(decodeAddress(pAddr));
-    const txResult = await claims.claim(accounts[1], decoded, { from: accounts[1] });
+    const txResult = await claims.claim(accounts[1], decoded, ranKey, { from: accounts[1] });
     expect(txResult.receipt).to.exist;
     const event = findEventFromReceipt(txResult.receipt, 'Claimed');
     expect(event).to.exist;
@@ -201,7 +204,7 @@ contract('Claims', accounts => {
 
   it('Invariant: Does not allow vesting to be set for a claimed address', async () => {
     await assertRevert(
-      claims.setVesting([accounts[1]]),
+      claims.setVesting([accounts[1]], [1]),
       "Account must not be claimed"
     );
   });
@@ -217,7 +220,7 @@ contract('Claims', accounts => {
     const pAddr = getPolkadotAddress('Bob');
     const decoded = u8aToHex(decodeAddress(pAddr));
     await assertRevert(
-      claims.claim(accounts[1], decoded, { from: accounts[1] }),
+      claims.claim(accounts[1], decoded, ranKey, { from: accounts[1] }),
       'Account has already claimed'
     );
   });
@@ -271,22 +274,22 @@ contract('Claims', accounts => {
     const decoded = u8aToHex(decodeAddress(pAddr));
 
     await assertRevert(
-      claims.claim(accounts[2], decoded, { from: accounts[6] }),
+      claims.claim(accounts[2], decoded, ranKey, { from: accounts[6] }),
       'Address is amended and sender is not the amendment'
     );
   });
 
   it('Allows owner to set vesting on an unclaimed addresses', async () => {
-    const txResult = await claims.setVesting([accounts[2]]);
+    const txResult = await claims.setVesting([accounts[2]], [1]);
     
     // Check for state change.
     const claim = await claims.claims(accounts[2]);
-    expect(claim.vested).to.equal(true);
+    expect(claim.vested.toString()).to.equal('1');
   });
 
   it('Invariant: Does not allow for vesting to be set twice', async () => {
     await assertRevert(
-      claims.setVesting([accounts[2]]),
+      claims.setVesting([accounts[2]], [2]),
       'Account must not be vested already'
     );
   });
@@ -294,7 +297,7 @@ contract('Claims', accounts => {
   it('Allows an amended address to claim to Polkadot address', async () => {
     const pAddr = getPolkadotAddress('Bob');
     const decoded = u8aToHex(decodeAddress(pAddr));
-    const txResult = await claims.claim(accounts[2], decoded, { from: accounts[4] });
+    const txResult = await claims.claim(accounts[2], decoded, ranKey, { from: accounts[4] });
     expect(txResult.receipt).to.exist;
     const event = findEventFromReceipt(txResult.receipt, 'Claimed');
     expect(event).to.exist;
@@ -323,22 +326,22 @@ contract('Claims', accounts => {
     const claimed0 = await claims.claimed(0);
     expect(claimed0).to.equal(accounts[3]);
     const claimData0 = await claims.claims(claimed0);
-    let { index, polkadot, vested } = claimData0;
+    let { index, pubKey, vested } = claimData0;
     expect(index.toString()).to.equal('1');
-    expect(polkadot).to.equal(u8aToHex(decodeAddress(getPolkadotAddress('Alice'))));
-    expect(vested).to.equal(false);
+    expect(pubKey).to.equal(u8aToHex(decodeAddress(getPolkadotAddress('Alice'))));
+    expect(vested.toString()).to.equal('0');
     const claimed1 = await claims.claimed(1);
     expect(claimed1).to.equal(accounts[1]);
     const claimData1 = await claims.claims(claimed1);
     expect(claimData1.index.toString()).to.equal('0');
-    expect(claimData1.polkadot).to.equal(u8aToHex(decodeAddress(getPolkadotAddress('Charlie'))));
-    expect(claimData1.vested).to.equal(false);
+    expect(claimData1.pubKey).to.equal(u8aToHex(decodeAddress(getPolkadotAddress('Charlie'))));
+    expect(claimData1.vested.toString()).to.equal('0');
     const claimed2 = await claims.claimed(2);
     expect(claimed2).to.equal(accounts[2]);
     const claimData2 = await claims.claims(claimed2);
     expect(claimData2.index.toString()).to.equal('2');
-    expect(claimData2.polkadot).to.equal(u8aToHex(decodeAddress(getPolkadotAddress('Bob'))));
-    expect(claimData2.vested).to.equal(true);
+    expect(claimData2.pubKey).to.equal(u8aToHex(decodeAddress(getPolkadotAddress('Bob'))));
+    expect(claimData2.vested.toString()).to.equal('1');
     const len = await claims.claimedLength();
     expect(len.toString()).to.equal('3');
   });
