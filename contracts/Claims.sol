@@ -9,7 +9,7 @@ contract Claims is Owned {
 
     struct Claim {
         uint    index;          // Index for short address.
-        bytes32 polkadot;       // Polkadot public key.
+        bytes32 pubKey;         // Ed25519/SR25519 public key.
         bool    hasIndex;       // Has the index been set?
         uint    vested;         // How much of the allocation is vested.
         bytes32 vestedKey;      // Polkadot public key for vested balance.
@@ -98,18 +98,18 @@ contract Claims is Owned {
         }
     }
 
-    /// Claims an allocation associated with an `_eth` address to a `_dot` public key.
+    /// Claims an allocation associated with an `_eth` address to a `_pubKey` public key.
     /// @dev Can only be called by the `_eth` address or the amended address for the allocation.
     /// @param _eth The allocation address to claim.
-    /// @param _dot The Polkadot public key to claim.
+    /// @param _pubKey The Polkadot public key to claim.
     /// @param _vestedKey The public key for vesting allocation claim.
     /// @return True if successful.
-    function claim(address _eth, bytes32 _dot, bytes32 _vestedKey)
+    function claim(address _eth, bytes32 _pubKey, bytes32 _vestedKey)
         external
         has_allocation(_eth)
         not_claimed(_eth)
     {
-        require(_dot != bytes32(0), "Failed to provide a Polkadot public key");
+        require(_pubKey != bytes32(0), "Failed to provide an Ed25519 or SR25519 public key");
         require(
             claims[_eth].vested == 0 || _vestedKey != bytes32(0),
             "Either no vested allocation or a vested key must have been provided" 
@@ -125,7 +125,7 @@ contract Claims is Owned {
             require(assignNextIndex(_eth), "Assigning the next index failed");
         }
 
-        claims[_eth].polkadot = _dot;
+        claims[_eth].pubKey = _pubKey;
 
         if (claims[_eth].vested > 0) {
             // Only make this storage call if there is a vested balance.
@@ -134,7 +134,7 @@ contract Claims is Owned {
         
         claimed.push(_eth);
 
-        emit Claimed(_eth, _dot, claims[_eth].index);
+        emit Claimed(_eth, _pubKey, claims[_eth].index);
     }
 
     /// Get the length of `claimed`.
@@ -151,7 +151,7 @@ contract Claims is Owned {
         has_allocation(_eth)
         public view returns (bool)
     {
-        return claims[_eth].polkadot != bytes32(0);
+        return claims[_eth].pubKey != bytes32(0);
     }
 
     /// Assings an index to an allocation address.
@@ -185,7 +185,7 @@ contract Claims is Owned {
     /// @dev Requires that `_eth` address has not claimed.
     modifier not_claimed(address _eth) {
         require(
-            claims[_eth].polkadot == bytes32(0),
+            claims[_eth].pubKey == bytes32(0),
             "Account has already claimed."
         );
         _;
