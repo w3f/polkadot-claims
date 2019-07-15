@@ -8,10 +8,10 @@ import "./FrozenToken.sol";
 contract Claims is Owned {
 
     struct Claim {
-        uint    index;      // Index for short address.
-        bytes32 polkadot;   // Polkadot public key.
-        bool    hasIndex;   // Has the index been set?
-        bool    vested;     // Is this allocation vested?
+        uint    index;          // Index for short address.
+        bytes32 pubKey;         // Ed25519/SR25519 public key.
+        bool    hasIndex;       // Has the index been set?
+        uint    vested;         // Amount of allocation that is vested.
     }
 
     // The address of the allocation indicator contract.
@@ -36,7 +36,7 @@ contract Claims is Owned {
     // Event for when an index is assigned to an allocation.
     event IndexAssigned(address indexed eth, uint indexed idx);
     // Event for when vesting is set on an allocation.
-    event Vested(address indexed eth);
+    event Vested(address indexed eth, uint amount);
 
     constructor(address _owner, address _allocations) public {
         require(_owner != address(0x0), "Must provide an owner address");
@@ -68,44 +68,46 @@ contract Claims is Owned {
 
     /// Allows owner to manually toggle vesting onto allocations.
     /// @param _eths The addresses for which to set vesting.
-    function setVesting(address[] calldata _eths)
+    /// @param _vestingAmts The amounts that the accounts are vested.
+    function setVesting(address[] calldata _eths, uint[] calldata _vestingAmts)
         external
         only_owner
     {
+        require(_eths.length == _vestingAmts.length, "Must submit arrays of equal length");
+
         for (uint i = 0; i < _eths.length; i++) {
             Claim storage claimData = claims[_eths[i]];
             require(!hasClaimed(_eths[i]), "Account must not be claimed");
-            require(!claimData.vested, "Account must not be vested already");
-            claimData.vested = true;
-            emit Vested(_eths[i]);
+            require(claimData.vested == 0, "Account must not be vested already");
+            require(_vestingAmts[i] != 0, "Vesting amount must be greater than zero");
+            claimData.vested = _vestingAmts[i];
+            emit Vested(_eths[i], _vestingAmts[i]);
         }
     }
 
     /// Allows anyone to assign a batch of indices onto unassigned and unclaimed allocations.
     /// @dev This function is safe because all the necessary checks are made on `assignNextIndex`.
-    /// @param _eths An array of allocation addresses to assign indices for.
+    /// @param _eths An array of all€ocation addresses to assign indices for.
     /// @return bool True is successful.
     function assignIndices(address[] calldata _eths)
-        external returns (bool)
+        external
     {
         for (uint i = 0; i < _eths.length; i++) {
-            assignNextIndex(_eths[i]);
+            require(assignNextIndex(_eths[i]), "Assigning the next index failed");
         }
-        return true;
     }
 
-    /// Claims an allocation associated with an `_eth` address to a `_dot` public key.
+    /// Claims an allocation associated with an `_eth` address to a `_pubKey` public key.
     /// @dev Can only be called by the `_eth` address or the amended address for the allocation.
     /// @param _eth The allocation address to claim.
-    /// @param _dot The Polkadot public key to claim.
+    /// @param _pubKey The Polkadot public key to claim.
     /// @return True if successful.
-    function claim(address _eth, bytes32 _dot)
+    function claim(address _eth, bytes32 _pubKey)
         external
         has_allocation(_eth)
         not_claimed(_eth)
-        returns (bool)
     {
-        require(_dot != bytes32(0), "Failed to provide a Polkadot public key");
+        require(_pubKey != bytes32(0), "Failed to provide an Ed25519 or SR25519 public key");
         
         if (amended[_eth] != address(0x0)) {
             require(amended[_eth] == msg.sender, "Address is amended and sender is not the amendment");
@@ -114,14 +116,13 @@ contract Claims is Owned {
         }
 
         if (claims[_eth].index == 0 && !claims[_eth].hasIndex) {
-            assignNextIndex(_eth);
+            require(assignNextIndex(_eth), "Assigning the next index failed");
         }
 
-        claims[_eth].polkadot = _dot;
+        claims[_eth].pubKey = _pubKey;
         claimed.push(_eth);
 
-        emit Claimed(_eth, _dot, claims[_eth].index);
-        return true;
+        emit Claimed(_eth, _pubKey, claims[_eth].index);
     }
 
     /// Get the length of `claimed`.
@@ -138,7 +139,7 @@ contract Claims is Owned {
         has_allocation(_eth)
         public view returns (bool)
     {
-        return claims[_eth].polkadot != bytes32(0);
+        return claims[_eth].pubKey != bytes32(0);
     }
 
     /// Assings an index to an allocation address.
@@ -172,7 +173,7 @@ contract Claims is Owned {
     /// @dev Requires that `_eth` address has not claimed.
     modifier not_claimed(address _eth) {
         require(
-            claims[_eth].polkadot == bytes32(0),
+            claims[_eth].pubKey == bytes32(0),
             "Account has already claimed."
         );
         _;
