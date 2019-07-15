@@ -11,8 +11,7 @@ contract Claims is Owned {
         uint    index;          // Index for short address.
         bytes32 pubKey;         // Ed25519/SR25519 public key.
         bool    hasIndex;       // Has the index been set?
-        uint    vested;         // How much of the allocation is vested.
-        bytes32 vestedKey;      // Polkadot public key for vested balance.
+        uint    vested;         // Amount of allocation that is vested.
     }
 
     // The address of the allocation indicator contract.
@@ -102,18 +101,13 @@ contract Claims is Owned {
     /// @dev Can only be called by the `_eth` address or the amended address for the allocation.
     /// @param _eth The allocation address to claim.
     /// @param _pubKey The Polkadot public key to claim.
-    /// @param _vestedKey The public key for vesting allocation claim.
     /// @return True if successful.
-    function claim(address _eth, bytes32 _pubKey, bytes32 _vestedKey)
+    function claim(address _eth, bytes32 _pubKey)
         external
         has_allocation(_eth)
         not_claimed(_eth)
     {
         require(_pubKey != bytes32(0), "Failed to provide an Ed25519 or SR25519 public key");
-        require(
-            claims[_eth].vested == 0 || _vestedKey != bytes32(0),
-            "Either no vested allocation or a vested key must have been provided" 
-        );
         
         if (amended[_eth] != address(0x0)) {
             require(amended[_eth] == msg.sender, "Address is amended and sender is not the amendment");
@@ -126,12 +120,6 @@ contract Claims is Owned {
         }
 
         claims[_eth].pubKey = _pubKey;
-
-        if (claims[_eth].vested > 0) {
-            // Only make this storage call if there is a vested balance.
-            claims[_eth].vestedKey = _vestedKey;
-        }
-        
         claimed.push(_eth);
 
         emit Claimed(_eth, _pubKey, claims[_eth].index);
