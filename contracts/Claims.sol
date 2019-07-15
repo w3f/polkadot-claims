@@ -80,6 +80,7 @@ contract Claims is Owned {
             Claim storage claimData = claims[_eths[i]];
             require(!hasClaimed(_eths[i]), "Account must not be claimed");
             require(claimData.vested == 0, "Account must not be vested already");
+            require(_vestingAmts[i] != 0, "Vesting amount must be greater than zero");
             claimData.vested = _vestingAmts[i];
             emit Vested(_eths[i], _vestingAmts[i]);
         }
