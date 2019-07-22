@@ -28,6 +28,13 @@ module.exports = {
       port: '8545',
       network_id: '*',
     },
+    ws: {
+      gas: 5000000,
+      gasPrice: 5000000000, // 5 gwei
+      host: '127.0.0.1',
+      port: '8545',
+      network_id: '*',
+    }
 
   },
 

@@ -14,6 +14,7 @@
   },
   "scripts": {
     "clean": "rm *.csv data addresses privateKeys txHashes",
+    "ws:deploy": "truffle migrate --f 2 --network ws --reset --compile-all",
     "goerli:deploy": "truffle migrate --f 2 --network goerli --reset --compile-all",
     "priv:deploy": "truffle migrate --f 2 --network priv --reset --compile-all",
     "build": "truffle build",

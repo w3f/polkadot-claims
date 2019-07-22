@@ -22,12 +22,12 @@ const myUtils = require('./utils.js');
   const frozenToken = new web3.eth.Contract(FrozenToken.abi, FrozenToken.networks[netId.toString()].address);
   const claims = new web3.eth.Contract(Claims.abi, Claims.networks[netId.toString()].address);
 
-  console.log(claims.options.address);
+  // console.log(claims.options.address);
 
-  console.log(await frozenToken.methods.balanceOf(sender).call());
+  // console.log(await frozenToken.methods.balanceOf(sender).call());
 
-  // First do distribution of all 100 tokens.
-  let n = 150;
+  // First do distribution of 30 tokens.
+  let n = 30;
   let myAccounts = [];
   let distributionPromise = [];
 
@@ -36,7 +36,7 @@ const myUtils = require('./utils.js');
     myAccounts.push(account);
     // fs.appendFileSync('./data', JSON.stringify(account));
     // fs.appendFileSync('./addresses', account.address);
-    if (n < 100) {
+    if (n < 20) {
       distributionPromise.push(
         frozenToken.methods.transfer(account.address, '1').send({
           from: sender,
@@ -71,6 +71,7 @@ const myUtils = require('./utils.js');
         to: claims.options.address,
         data: data,
         gas: '1000000',
+        gasPrice: '1000000000',
       });
 
       return web3.eth.sendSignedTransaction(rawTx.rawTransaction).on('receipt', console.log);

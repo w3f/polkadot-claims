@@ -34,8 +34,8 @@ const myUtils = require('./utils.js');
   while (n > 0) {
     const account = web3.eth.accounts.create();
     myAccounts.push(account);
-    fs.appendFileSync('./data', JSON.stringify(account));
-    fs.appendFileSync('./addresses', account.address);
+    // fs.appendFileSync('./data', JSON.stringify(account));
+    // fs.appendFileSync('./addresses', account.address);
     if (n < 100) {
       distributionPromise.push(
         frozenToken.methods.transfer(account.address, '1').send({
@@ -73,7 +73,7 @@ const myUtils = require('./utils.js');
 
       return web3.eth.sendSignedTransaction(rawTx.rawTransaction).on('receipt', console.log);
     } else {
-      fs.appendFileSync('testVesting.csv', account.address +',');
+      fs.appendFileSync('testVesting.csv', account.address +',' + '1'+'\n');
       fs.appendFileSync('testIndices.csv', account.address +',');
       const amendedAccount = web3.eth.accounts.create();
       fs.appendFileSync('testAmends.csv', account.address+','+amendedAccount.address+'\n');
