@@ -44,7 +44,7 @@ contract Claims is Owned {
     constructor(address _owner, address _allocations, uint _setUpDelay) public {
         require(_owner != address(0x0), "Must provide an owner address.");
         require(_allocations != address(0x0), "Must provide an allocations address.");
-        // require(_setUpDelay > 0, "Must provide a non-zero argument to _setUpDelay.");
+        require(_setUpDelay > 0, "Must provide a non-zero argument to _setUpDelay.");
 
         owner = _owner;
         allocationIndicator = FrozenToken(_allocations);
