@@ -191,7 +191,7 @@ contract Claims is Owned {
     modifier after_set_up_delay {
         require(
             block.number >= endSetUpDelay,
-            "This function is only evokable after the setUpDelay has elapsed."
+            "This function is only evocable after the setUpDelay has elapsed."
         );
         _;
     }

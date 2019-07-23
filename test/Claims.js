@@ -10,8 +10,20 @@ const { decodeAddress } = require('@polkadot/keyring');
 // Turn ON / OFF logging
 const NOISY = false;
 
-// A dummy key used for testing.
-const ranKey = web3.utils.randomHex(32);
+const mineUntil = async (number) => {
+  while ((await web3.eth.getBlockNumber()) < number) {
+    await new Promise(resolve => {
+      web3.currentProvider.send({
+        jsonrpc: "2.0",
+        method: "evm_mine",
+        params: [],
+        id: new Date().getTime(),
+      }, (err, res) => {
+        return resolve(res);
+      });
+    })
+  }
+}
 
 const assertRevert = async (transaction, expectedErr) => {
   try {
@@ -100,7 +112,7 @@ contract('Claims', accounts => {
     claims = await Claims.new(
       owner,
       frozenToken.address,
-      '3',
+      '30',
     );
     expect(claims.address).to.exist;
     deployGas(claims, 'Claims');
@@ -127,7 +139,7 @@ contract('Claims', accounts => {
     const nextIndex = await claims.nextIndex();
     expect(nextIndex.toString()).to.equal('1');
 
-    assertRevert(
+    await assertRevert(
       claims.assignIndices([accounts[2]], { from: accounts[7] }),
       'Only owner is allowed to call this function before the end of the set up delay.',
     );
@@ -165,14 +177,31 @@ contract('Claims', accounts => {
   });
 
   it('Invariant: Does not allow anyone besides owner to amend', async () => {
-    assertRevert(
+    await assertRevert(
       claims.amend([accounts[1]], [accounts[5]], { from: accounts[7] }),
       "Only owner"
     );
-    assertRevert(
+    await assertRevert(
       claims.amend([accounts[1]], [accounts[5]], { from: accounts[9] }),
       "Only owner"
     );
+  });
+
+  it('Invariant: Does not allow a claim before end of set-up delay', async () => {
+    // Sanity - Check that we are before `endSetUpDelay`.
+    const endSetUpDelay = await claims.endSetUpDelay();
+    const blockNumber = await web3.eth.getBlockNumber();
+    expect(blockNumber).to.be.lessThan(endSetUpDelay.toNumber());
+
+    const pAddr = getPolkadotAddress('Julie');
+    const decoded = u8aToHex(decodeAddress(pAddr));
+    await assertRevert(
+      claims.claim(accounts[3], decoded, { from: accounts[3] }),
+      'This function is only evocable after the setUpDelay has elapsed.',
+    );
+
+    // Now time travel to `endSetUpDelay`.
+    await mineUntil(endSetUpDelay.toNumber());
   });
 
   it('Invariant: Does not allow a claim from non allocation or amended address', async () => {
