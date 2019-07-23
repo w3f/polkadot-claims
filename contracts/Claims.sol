@@ -97,6 +97,7 @@ contract Claims is Owned {
     /// @return bool True is successful.
     function assignIndices(address[] calldata _eths)
         external
+        protected_during_delay
     {
         for (uint i = 0; i < _eths.length; i++) {
             require(assignNextIndex(_eths[i]), "Assigning the next index failed.");
@@ -110,6 +111,7 @@ contract Claims is Owned {
     /// @return True if successful.
     function claim(address _eth, bytes32 _pubKey)
         external
+        after_set_up_delay
         has_allocation(_eth)
         not_claimed(_eth)
     {
@@ -186,11 +188,21 @@ contract Claims is Owned {
     }
 
     /// @dev Requires the function with his modifier is evoked after `deployedAt` + `setUpPhase` number of blocks.
-    modifier afterSetUpDelay {
+    modifier after_set_up_delay {
         require(
             block.number >= endSetUpDelay,
             "This function is only evokable after the setUpDelay has elapsed."
         );
+        _;
+    }
+
+    modifier protected_during_delay {
+        if (block.number < endSetUpDelay) {
+            require(
+                msg.sender == owner,
+                "Only owner is allowed to call this function before the end of the set up delay."
+            );
+        }
         _;
     }
 }
