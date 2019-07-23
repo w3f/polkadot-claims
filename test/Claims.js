@@ -100,6 +100,7 @@ contract('Claims', accounts => {
     claims = await Claims.new(
       owner,
       frozenToken.address,
+      '0',
     );
     expect(claims.address).to.exist;
     deployGas(claims, 'Claims');
