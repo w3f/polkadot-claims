@@ -100,7 +100,7 @@ contract('Claims', accounts => {
     claims = await Claims.new(
       owner,
       frozenToken.address,
-      '0',
+      '3',
     );
     expect(claims.address).to.exist;
     deployGas(claims, 'Claims');
@@ -111,13 +111,28 @@ contract('Claims', accounts => {
     const nextIndex = await claims.nextIndex();
     expect(nextIndex.toString()).to.equal('0');
 
-    const assignTx = await claims.assignIndices([accounts[1]]);
+    const assignTx = await claims.assignIndices([accounts[1]], { from: owner });
     expect(assignTx.receipt).to.exist;
     const event = findEventFromReceipt(assignTx.receipt, 'IndexAssigned');
     const { eth, idx } = event.args;
     expect(eth).to.equal(accounts[1]);
     expect(idx.toString()).to.equal('0');
 
+    const nextIndexAfter = await claims.nextIndex();
+    expect(nextIndexAfter.toString()).to.equal('1');
+  });
+
+  it('Invariant: Does not allow anyone besides owner to call `assignIndices` before end of set-up delay', async () => {
+    // Sanity
+    const nextIndex = await claims.nextIndex();
+    expect(nextIndex.toString()).to.equal('1');
+
+    assertRevert(
+      claims.assignIndices([accounts[2]], { from: accounts[7] }),
+      'Only owner is allowed to call this function before the end of the set up delay.',
+    );
+
+    // Sanity
     const nextIndexAfter = await claims.nextIndex();
     expect(nextIndexAfter.toString()).to.equal('1');
   });
