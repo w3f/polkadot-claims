@@ -1,6 +1,118 @@
 pragma solidity 0.5.9;
 
-import "./FrozenToken.sol";
+// File: contracts/FrozenToken.sol
+
+/**
+ * Source Code first verified at https://etherscan.io on Wednesday, October 11, 2017
+ (UTC) */
+
+//! FrozenToken ECR20-compliant token contract
+//! By Parity Technologies, 2017.
+//! Released under the Apache Licence 2.
+
+pragma solidity ^0.5.0;
+
+// Owned contract.
+contract Owned {
+	modifier only_owner { require (msg.sender == owner, "Only owner"); _; }
+
+	event NewOwner(address indexed old, address indexed current);
+
+	function setOwner(address _new) public only_owner { emit NewOwner(owner, _new); owner = _new; }
+
+	address public owner;
+}
+
+// FrozenToken, a bit like an ECR20 token (though not - as it doesn't
+// implement most of the API).
+// All token balances are generally non-transferable.
+// All "tokens" belong to the owner (who is uniquely liquid) at construction.
+// Liquid accounts can make other accounts liquid and send their tokens
+// to other axccounts.
+contract FrozenToken is Owned {
+	event Transfer(address indexed from, address indexed to, uint256 value);
+
+	// this is as basic as can be, only the associated balance & allowances
+	struct Account {
+		uint balance;
+		bool liquid;
+	}
+
+	// constructor sets the parameters of execution, _totalSupply is all units
+	constructor(uint _totalSupply, address _owner)
+        public
+		when_non_zero(_totalSupply)
+	{
+		totalSupply = _totalSupply;
+		owner = _owner;
+		accounts[_owner].balance = totalSupply;
+		accounts[_owner].liquid = true;
+	}
+
+	// balance of a specific address
+	function balanceOf(address _who) public view returns (uint256) {
+		return accounts[_who].balance;
+	}
+
+	// make an account liquid: only liquid accounts can do this.
+	function makeLiquid(address _to)
+		public
+		when_liquid(msg.sender)
+		returns(bool)
+	{
+		accounts[_to].liquid = true;
+		return true;
+	}
+
+	// transfer
+	function transfer(address _to, uint256 _value)
+		public
+		when_owns(msg.sender, _value)
+		when_liquid(msg.sender)
+		returns(bool)
+	{
+		emit Transfer(msg.sender, _to, _value);
+		accounts[msg.sender].balance -= _value;
+		accounts[_to].balance += _value;
+
+		return true;
+	}
+
+	// no default function, simple contract only, entry-level users
+	function() external {
+		assert(false);
+	}
+
+	// the balance should be available
+	modifier when_owns(address _owner, uint _amount) {
+		require (accounts[_owner].balance >= _amount);
+		_;
+	}
+
+	modifier when_liquid(address who) {
+		require (accounts[who].liquid);
+		_;
+	}
+
+	// a value should be > 0
+	modifier when_non_zero(uint _value) {
+		require (_value > 0);
+		_;
+	}
+
+	// Available token supply
+	uint public totalSupply;
+
+	// Storage and mapping of all balances & allowances
+	mapping (address => Account) accounts;
+
+	// Conventional metadata.
+	string public constant name = "DOT Allocation Indicator";
+	string public constant symbol = "DOT";
+	uint8 public constant decimals = 3;
+}
+
+// File: contracts/Claims.sol
 
 /// @author Web3 Foundation
 /// @title  Claims
@@ -29,9 +141,6 @@ contract Claims is Owned {
     // Amended keys, old address => new address. New address is allowed to claim for old address.
     mapping (address => address) public amended;
 
-    // Block number that the set up delay ends.
-    uint public endSetUpDelay;
-
     // Event for when an allocation address amendment is made.
     event Amended(address indexed original, address indexed amendedTo);
     // Event for when an allocation is claimed to a Polkadot address.
@@ -41,15 +150,12 @@ contract Claims is Owned {
     // Event for when vesting is set on an allocation.
     event Vested(address indexed eth, uint amount);
 
-    constructor(address _owner, address _allocations, uint _setUpDelay) public {
-        require(_owner != address(0x0), "Must provide an owner address.");
-        require(_allocations != address(0x0), "Must provide an allocations address.");
-        require(_setUpDelay > 0, "Must provide a non-zero argument to _setUpDelay.");
+    constructor(address _owner, address _allocations) public {
+        require(_owner != address(0x0), "Must provide an owner address");
+        require(_allocations != address(0x0), "Must provide an allocations address");
 
         owner = _owner;
         allocationIndicator = FrozenToken(_allocations);
-        
-        endSetUpDelay = block.number + _setUpDelay;
     }
 
     /// Allows owner to manually amend allocations to a new address that can claim.
@@ -66,7 +172,7 @@ contract Claims is Owned {
         );
 
         for (uint i = 0; i < _amends.length; i++) {
-            require(!hasClaimed(_origs[i]), "Address has already claimed.");
+            require(!hasClaimed(_origs[i]), "Address has already claimed");
             amended[_origs[i]] = _amends[i];
             emit Amended(_origs[i], _amends[i]);
         }
@@ -79,13 +185,13 @@ contract Claims is Owned {
         external
         only_owner
     {
-        require(_eths.length == _vestingAmts.length, "Must submit arrays of equal length.");
+        require(_eths.length == _vestingAmts.length, "Must submit arrays of equal length");
 
         for (uint i = 0; i < _eths.length; i++) {
             Claim storage claimData = claims[_eths[i]];
-            require(!hasClaimed(_eths[i]), "Account must not be claimed.");
-            require(claimData.vested == 0, "Account must not be vested already.");
-            require(_vestingAmts[i] != 0, "Vesting amount must be greater than zero.");
+            require(!hasClaimed(_eths[i]), "Account must not be claimed");
+            require(claimData.vested == 0, "Account must not be vested already");
+            require(_vestingAmts[i] != 0, "Vesting amount must be greater than zero");
             claimData.vested = _vestingAmts[i];
             emit Vested(_eths[i], _vestingAmts[i]);
         }
@@ -93,14 +199,13 @@ contract Claims is Owned {
 
     /// Allows anyone to assign a batch of indices onto unassigned and unclaimed allocations.
     /// @dev This function is safe because all the necessary checks are made on `assignNextIndex`.
-    /// @param _eths An array of allocation addresses to assign indices for.
+    /// @param _eths An array of all€ocation addresses to assign indices for.
     /// @return bool True is successful.
     function assignIndices(address[] calldata _eths)
         external
-        protected_during_delay
     {
         for (uint i = 0; i < _eths.length; i++) {
-            require(assignNextIndex(_eths[i]), "Assigning the next index failed.");
+            require(assignNextIndex(_eths[i]), "Assigning the next index failed");
         }
     }
 
@@ -111,20 +216,19 @@ contract Claims is Owned {
     /// @return True if successful.
     function claim(address _eth, bytes32 _pubKey)
         external
-        after_set_up_delay
         has_allocation(_eth)
         not_claimed(_eth)
     {
-        require(_pubKey != bytes32(0), "Failed to provide an Ed25519 or SR25519 public key.");
+        require(_pubKey != bytes32(0), "Failed to provide an Ed25519 or SR25519 public key");
         
         if (amended[_eth] != address(0x0)) {
-            require(amended[_eth] == msg.sender, "Address is amended and sender is not the amendment.");
+            require(amended[_eth] == msg.sender, "Address is amended and sender is not the amendment");
         } else {
-            require(_eth == msg.sender, "Sender is not the allocation address.");
+            require(_eth == msg.sender, "Sender is not the allocation address");
         }
 
         if (claims[_eth].index == 0 && !claims[_eth].hasIndex) {
-            require(assignNextIndex(_eth), "Assigning the next index failed.");
+            require(assignNextIndex(_eth), "Assigning the next index failed");
         }
 
         claims[_eth].pubKey = _pubKey;
@@ -159,7 +263,7 @@ contract Claims is Owned {
         internal returns (bool)
     {
         require(claims[_eth].index == 0, "Cannot reassign an index.");
-        require(!claims[_eth].hasIndex, "Address has already been assigned an index.");
+        require(!claims[_eth].hasIndex, "Address has already been assigned an index");
         uint idx = nextIndex;
         nextIndex++;
         claims[_eth].index = idx;
@@ -173,7 +277,7 @@ contract Claims is Owned {
         uint bal = allocationIndicator.balanceOf(_eth);
         require(
             bal > 0,
-            "Ethereum address has no DOT allocation."
+            "Ethereum address has no DOT allocation"
         );
         _;
     }
@@ -184,25 +288,6 @@ contract Claims is Owned {
             claims[_eth].pubKey == bytes32(0),
             "Account has already claimed."
         );
-        _;
-    }
-
-    /// @dev Requires the function with his modifier is evoked after `deployedAt` + `setUpPhase` number of blocks.
-    modifier after_set_up_delay {
-        require(
-            block.number >= endSetUpDelay,
-            "This function is only evocable after the setUpDelay has elapsed."
-        );
-        _;
-    }
-
-    modifier protected_during_delay {
-        if (block.number < endSetUpDelay) {
-            require(
-                msg.sender == owner,
-                "Only owner is allowed to call this function before the end of the set up delay."
-            );
-        }
         _;
     }
 }
