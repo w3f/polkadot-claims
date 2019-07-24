@@ -97,7 +97,7 @@ contract('Claims', accounts => {
     deployGas(frozenToken, 'Frozen Token');
 
     // Set up the token with a bunch of balances.
-    let nSends = 3;
+    let nSends = 4;
     const makeSends = async (num) => {
 
       let i = 1;
@@ -134,6 +134,19 @@ contract('Claims', accounts => {
     expect(nextIndexAfter.toString()).to.equal('1');
   });
 
+  it('Allows setting vesting on an unallocated address', async () => {
+    const vestingTx = await claims.setVesting([accounts[9]], ['10'], { from: owner });
+    expect(vestingTx.receipt).to.exist;
+    const event = findEventFromReceipt(vestingTx.receipt, 'Vested');
+    const { eth, amount } = event.args;
+    expect(eth).to.equal(accounts[9]);
+    expect(amount.toString()).to.equal('10');
+
+    // Sanity
+    const claimData = await claims.claims(accounts[9]);
+    expect(claimData.vested.toString()).to.equal('10');
+  });
+
   it('Invariant: Does not allow anyone besides owner to call `assignIndices` before end of set-up delay', async () => {
     // Sanity
     const nextIndex = await claims.nextIndex();
@@ -150,7 +163,7 @@ contract('Claims', accounts => {
   });
 
   it('Allows owner to amend a new Ethereum address for a lost key', async () => {
-    const amended = accounts[4];
+    const amended = accounts[8];
     const orig = accounts[2];
     const txResult = await claims.amend([orig], [amended]);
     expect(txResult.receipt).to.exist;
@@ -171,9 +184,9 @@ contract('Claims', accounts => {
     expect(amended).to.equal(accounts[6]);
 
     // Change it back
-    await claims.amend([accounts[2]], [accounts[4]]);
+    await claims.amend([accounts[2]], [accounts[8]]);
     const amendedBack = await claims.amended(accounts[2]);
-    expect(amendedBack).to.equal(accounts[4]);
+    expect(amendedBack).to.equal(accounts[8]);
   });
 
   it('Invariant: Does not allow anyone besides owner to amend', async () => {
@@ -298,7 +311,7 @@ contract('Claims', accounts => {
     expect(nextIndex.toString()).to.equal('3')
 
     await assertRevert(
-      claims.assignIndices([accounts[4]]),
+      claims.assignIndices([accounts[8]]),
       'Ethereum address has no DOT allocation'
     );
 
@@ -342,7 +355,7 @@ contract('Claims', accounts => {
   it('Allows an amended address to claim to Polkadot address', async () => {
     const pAddr = getPolkadotAddress('Bob');
     const decoded = u8aToHex(decodeAddress(pAddr));
-    const txResult = await claims.claim(accounts[2], decoded, { from: accounts[4] });
+    const txResult = await claims.claim(accounts[2], decoded, { from: accounts[8] });
     expect(txResult.receipt).to.exist;
     const event = findEventFromReceipt(txResult.receipt, 'Claimed');
     expect(event).to.exist;
@@ -356,14 +369,46 @@ contract('Claims', accounts => {
     expect(curIdx.toString()).to.equal('3');
   });
 
-  it('Invariant: Does not allow `hasClaimed` call to be made on a non-allocation address', async () => {
-    // First make sure it works as we expect
-    const hasClaimed = await claims.hasClaimed(accounts[2]);
-    expect(hasClaimed).to.be.true;
-    // Then make sure it reverts like we expect
+  it('Allows owner to increaseVesting on an already claimed address', async () => {
+    const claimData = await claims.claims(accounts[2]);
+    expect(claimData.vested.toString()).to.equal('1');
+
+    const vestingTx = await claims.increaseVesting([accounts[2]], ['1'], { from: owner });
+    expect(vestingTx.receipt).to.exist;
+
+    const claimDataAfter = await claims.claims(accounts[2]);
+    expect(claimDataAfter.vested.toString()).to.equal('2');
+  });
+
+  it('Invariant: increaseVesting will not overflow', async () => {
+    const uintMax = await claims.UINT_MAX();
     await assertRevert(
-      claims.hasClaimed(accounts[8]),
-      'Ethereum address has no DOT allocation'
+      claims.increaseVesting([accounts[2]], [uintMax.toString()], { from: owner }),
+      "Overflow in addition."
+    )
+  });
+
+  it('Invariant: Only allows owner to freeze the contract', async () => {
+    await assertRevert(
+      claims.freeze({ from: accounts[9] }),
+      "Only owner"
+    );
+
+    const freezeTx = await claims.freeze({ from: owner });
+    expect(freezeTx.receipt).to.exist;
+
+    // Sanity
+    const endSetUpDelay = await claims.endSetUpDelay();
+    expect(endSetUpDelay.toString()).to.equal('115792089237316195423570985008687907853269984665640564039457584007913129639935');
+  });
+
+  it('Does not allow an -otherwise valid- claim to happen after being frozen', async () => {
+    const pAddr = getPolkadotAddress('Hugo');
+    const decoded = decodeAddress(pAddr);
+
+    await assertRevert(
+      claims.claim(accounts[4], decoded, { from: accounts[4] }),
+      "This function is only evocable after the setUpDelay has elapsed."
     );
   });
 
@@ -386,7 +431,7 @@ contract('Claims', accounts => {
     const claimData2 = await claims.claims(claimed2);
     expect(claimData2.index.toString()).to.equal('2');
     expect(claimData2.pubKey).to.equal(u8aToHex(decodeAddress(getPolkadotAddress('Bob'))));
-    expect(claimData2.vested.toString()).to.equal('1');
+    expect(claimData2.vested.toString()).to.equal('2');
     const len = await claims.claimedLength();
     expect(len.toString()).to.equal('3');
   });

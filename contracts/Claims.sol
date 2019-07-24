@@ -7,9 +7,12 @@ import "./FrozenToken.sol";
 ///         Allows allocations to be claimed to Polkadot public keys.
 contract Claims is Owned {
 
+    // The maximum number contained by the type `uint`. Used to freeze the contract from claims.
+    uint constant public UINT_MAX =  115792089237316195423570985008687907853269984665640564039457584007913129639935;
+
     struct Claim {
         uint    index;          // Index for short address.
-        bytes32 pubKey;         // Ed25519/SR25519 public key.
+        bytes32 pubKey;         // x25519 public key.
         bool    hasIndex;       // Has the index been set?
         uint    vested;         // Amount of allocation that is vested.
     }
@@ -91,6 +94,35 @@ contract Claims is Owned {
         }
     }
 
+    /// Allows owner to increase the vesting on an allocation, whether it is claimed or not.
+    /// @param _eths The addresses for which to increase vesting.
+    /// @param _vestingAmts The amounts to increase the vesting for each account.
+    function increaseVesting(address[] calldata _eths, uint[] calldata _vestingAmts)
+        external
+        only_owner
+    {
+        require(_eths.length == _vestingAmts.length, "Must submit arrays of equal length.");
+
+        for (uint i = 0; i < _eths.length; i++) {
+            Claim storage claimData = claims[_eths[i]];
+            // Does not require that the allocation is unclaimed.
+            // Does not require that vesting has already been set or not.
+            require(_vestingAmts[i] > 0, "Vesting amount must be greater than zero.");
+            uint oldVesting = claimData.vested;
+            uint newVesting = oldVesting + _vestingAmts[i];
+            // Check for overflow.
+            require(newVesting > oldVesting, "Overflow in addition.");
+            claimData.vested = newVesting;
+            emit Vested(_eths[i], _vestingAmts[i]);
+        }
+    }
+
+    /// Freezes the contract from any further claims.
+    /// @dev Protected by the `only_owner` modifier.
+    function freeze() external only_owner {
+        endSetUpDelay = UINT_MAX;
+    }
+
     /// Allows anyone to assign a batch of indices onto unassigned and unclaimed allocations.
     /// @dev This function is safe because all the necessary checks are made on `assignNextIndex`.
     /// @param _eths An array of allocation addresses to assign indices for.
@@ -144,7 +176,6 @@ contract Claims is Owned {
     /// Get whether an allocation has been claimed.
     /// @return bool True if claimed.
     function hasClaimed(address _eth)
-        has_allocation(_eth)
         public view returns (bool)
     {
         return claims[_eth].pubKey != bytes32(0);
@@ -187,7 +218,7 @@ contract Claims is Owned {
         _;
     }
 
-    /// @dev Requires the function with his modifier is evoked after `deployedAt` + `setUpPhase` number of blocks.
+    /// @dev Requires that the function with this modifier is evoked after `endSetUpDelay`.
     modifier after_set_up_delay {
         require(
             block.number >= endSetUpDelay,
@@ -196,6 +227,7 @@ contract Claims is Owned {
         _;
     }
 
+    /// @dev Requires that the function with this modifier is evoked only by owner before `endSetUpDelay`.
     modifier protected_during_delay {
         if (block.number < endSetUpDelay) {
             require(
