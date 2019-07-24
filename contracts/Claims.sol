@@ -7,7 +7,7 @@ import "./FrozenToken.sol";
 ///         Allows allocations to be claimed to Polkadot public keys.
 contract Claims is Owned {
 
-    // Used to set the end of the contract.
+    // The maximum number contained by the type `uint`. Used to freeze the contract from claims.
     uint constant public UINT_MAX =  115792089237316195423570985008687907853269984665640564039457584007913129639935;
 
     struct Claim {
@@ -102,9 +102,9 @@ contract Claims is Owned {
 
         for (uint i = 0; i < _eths.length; i++) {
             Claim storage claimData = claims[_eths[i]];
-            // Do not require that the allocation is unclaimed.
-            // Do not require that vesting has already been set.
-            require(_vestingAmts > 0, "Vesting amount must be greater than zero.");
+            // Does not require that the allocation is unclaimed.
+            // Does not require that vesting has already been set.
+            require(_vestingAmts[i] > 0, "Vesting amount must be greater than zero.");
             uint oldVesting = claimData.vested;
             uint newVesting = oldVesting + _vestingAmts[i];
             // Check for overflow.
