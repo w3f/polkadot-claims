@@ -91,6 +91,26 @@ contract Claims is Owned {
         }
     }
 
+    function increaseVesting(address[] calldata _eths, uint[] calldata _vestingAmts)
+        external
+        only_owner
+    {
+        require(_eths.length == _vestingAmts.length, "Must submit arrays of equal length.");
+
+        for (uint i = 0; i < _eths.length; i++) {
+            Claim storage claimData = claims[_eths[i]];
+            // Do not require that the allocation is unclaimed.
+            // Do not require that vesting has already been set.
+            require(_vestingAmts > 0, "Vesting amount must be greater than zero.");
+            uint oldVesting = claimData.vested;
+            uint newVesting = oldVesting + _vestingAmts[i];
+            // Check for overflow.
+            require(newVesting > oldVesting, "Overflow in addition.");
+            claimData.vested = newVesting;
+            emit Vested(_eths[i], _vestingAmts[i]);
+        }
+    }
+
     /// Allows anyone to assign a batch of indices onto unassigned and unclaimed allocations.
     /// @dev This function is safe because all the necessary checks are made on `assignNextIndex`.
     /// @param _eths An array of allocation addresses to assign indices for.
@@ -144,7 +164,7 @@ contract Claims is Owned {
     /// Get whether an allocation has been claimed.
     /// @return bool True if claimed.
     function hasClaimed(address _eth)
-        has_allocation(_eth)
+        // has_allocation(_eth)
         public view returns (bool)
     {
         return claims[_eth].pubKey != bytes32(0);
