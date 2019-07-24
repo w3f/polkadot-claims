@@ -94,6 +94,9 @@ contract Claims is Owned {
         }
     }
 
+    /// Allows owner to increase the vesting on an allocation, whether it is claimed or not.
+    /// @param _eths The addresses for which to increase vesting.
+    /// @param _vestingAmts The amounts to increase the vesting for each account.
     function increaseVesting(address[] calldata _eths, uint[] calldata _vestingAmts)
         external
         only_owner
