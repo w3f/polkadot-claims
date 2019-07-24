@@ -8,7 +8,7 @@ import "./FrozenToken.sol";
 contract Claims is Owned {
 
     // Used to set the end of the contract.
-    uint constant public UINT_MAX = 340282366920938463463374607431768211455;
+    uint constant public UINT_MAX =  115792089237316195423570985008687907853269984665640564039457584007913129639935;
 
     struct Claim {
         uint    index;          // Index for short address.
