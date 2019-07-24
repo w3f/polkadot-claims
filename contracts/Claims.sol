@@ -12,7 +12,7 @@ contract Claims is Owned {
 
     struct Claim {
         uint    index;          // Index for short address.
-        bytes32 pubKey;         // Ed25519/SR25519 public key.
+        bytes32 pubKey;         // x25519 public key.
         bool    hasIndex;       // Has the index been set?
         uint    vested;         // Amount of allocation that is vested.
     }
@@ -114,6 +114,8 @@ contract Claims is Owned {
         }
     }
 
+    /// Freezes the contract from any further claims.
+    /// @dev Protected by the `only_owner` modifier.
     function freeze() external only_owner {
         endSetUpDelay = UINT_MAX;
     }
@@ -213,7 +215,7 @@ contract Claims is Owned {
         _;
     }
 
-    /// @dev Requires the function with his modifier is evoked after `deployedAt` + `setUpPhase` number of blocks.
+    /// @dev Requires that the function with this modifier is evoked after `endSetUpDelay`.
     modifier after_set_up_delay {
         require(
             block.number >= endSetUpDelay,
@@ -222,6 +224,7 @@ contract Claims is Owned {
         _;
     }
 
+    /// @dev Requires that the function with this modifier is evoked only by owner before `endSetUpDelay`.
     modifier protected_during_delay {
         if (block.number < endSetUpDelay) {
             require(
