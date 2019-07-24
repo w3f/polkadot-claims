@@ -114,7 +114,7 @@ contract Claims is Owned {
         }
     }
 
-    function freeze() external onlyOwner {
+    function freeze() external only_owner {
         endSetUpDelay = UINT_MAX;
     }
 
@@ -171,7 +171,6 @@ contract Claims is Owned {
     /// Get whether an allocation has been claimed.
     /// @return bool True if claimed.
     function hasClaimed(address _eth)
-        // has_allocation(_eth)
         public view returns (bool)
     {
         return claims[_eth].pubKey != bytes32(0);
