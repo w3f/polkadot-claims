@@ -103,7 +103,7 @@ contract Claims is Owned {
         for (uint i = 0; i < _eths.length; i++) {
             Claim storage claimData = claims[_eths[i]];
             // Does not require that the allocation is unclaimed.
-            // Does not require that vesting has already been set.
+            // Does not require that vesting has already been set or not.
             require(_vestingAmts[i] > 0, "Vesting amount must be greater than zero.");
             uint oldVesting = claimData.vested;
             uint newVesting = oldVesting + _vestingAmts[i];

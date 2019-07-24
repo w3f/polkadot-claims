@@ -369,6 +369,25 @@ contract('Claims', accounts => {
     expect(curIdx.toString()).to.equal('3');
   });
 
+  it('Allows owner to increaseVesting on an already claimed address', async () => {
+    const claimData = await claims.claims(accounts[2]);
+    expect(claimData.vested.toString()).to.equal('1');
+
+    const vestingTx = await claims.increaseVesting([accounts[2]], ['1'], { from: owner });
+    expect(vestingTx.receipt).to.exist;
+
+    const claimDataAfter = await claims.claims(accounts[2]);
+    expect(claimDataAfter.vested.toString()).to.equal('2');
+  });
+
+  it('Invariant: increaseVesting will not overflow', async () => {
+    const uintMax = await claims.UINT_MAX();
+    await assertRevert(
+      claims.increaseVesting([accounts[2]], [uintMax.toString()], { from: owner }),
+      "Overflow in addition."
+    )
+  });
+
   it('Invariant: Only allows owner to freeze the contract', async () => {
     await assertRevert(
       claims.freeze({ from: accounts[9] }),
@@ -412,7 +431,7 @@ contract('Claims', accounts => {
     const claimData2 = await claims.claims(claimed2);
     expect(claimData2.index.toString()).to.equal('2');
     expect(claimData2.pubKey).to.equal(u8aToHex(decodeAddress(getPolkadotAddress('Bob'))));
-    expect(claimData2.vested.toString()).to.equal('1');
+    expect(claimData2.vested.toString()).to.equal('2');
     const len = await claims.claimedLength();
     expect(len.toString()).to.equal('3');
   });
