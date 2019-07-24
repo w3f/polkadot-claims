@@ -7,6 +7,9 @@ import "./FrozenToken.sol";
 ///         Allows allocations to be claimed to Polkadot public keys.
 contract Claims is Owned {
 
+    // Used to set the end of the contract.
+    uint constant public UINT_MAX = 340282366920938463463374607431768211455;
+
     struct Claim {
         uint    index;          // Index for short address.
         bytes32 pubKey;         // Ed25519/SR25519 public key.
@@ -109,6 +112,10 @@ contract Claims is Owned {
             claimData.vested = newVesting;
             emit Vested(_eths[i], _vestingAmts[i]);
         }
+    }
+
+    function freeze() external onlyOwner {
+        endSetUpDelay = UINT_MAX;
     }
 
     /// Allows anyone to assign a batch of indices onto unassigned and unclaimed allocations.
