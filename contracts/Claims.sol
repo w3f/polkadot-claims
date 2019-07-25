@@ -72,7 +72,7 @@ contract Claims is Owned {
 
         for (uint i = 0; i < _amends.length; i++) {
             require(!hasClaimed(_origs[i]), "Address has already claimed.");
-            require(hasAllocation(_origs[i]), "Ethereum account has no DOT allocation.");
+            require(hasAllocation(_origs[i]), "Ethereum address has no DOT allocation.");
             amended[_origs[i]] = _amends[i];
             emit Amended(_origs[i], _amends[i]);
         }
