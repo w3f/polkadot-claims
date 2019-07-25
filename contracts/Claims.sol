@@ -43,6 +43,8 @@ contract Claims is Owned {
     event IndexAssigned(address indexed eth, uint indexed idx);
     // Event for when vesting is set on an allocation.
     event Vested(address indexed eth, uint amount);
+    // Event for when vesting is increased on an account.
+    event VestedIncreased(address indexed eth, uint newTotal);
 
     constructor(address _owner, address _allocations, uint _setUpDelay) public {
         require(_owner != address(0x0), "Must provide an owner address.");
@@ -70,6 +72,7 @@ contract Claims is Owned {
 
         for (uint i = 0; i < _amends.length; i++) {
             require(!hasClaimed(_origs[i]), "Address has already claimed.");
+            require(hasAllocation(_origs[i]), "Ethereum account has no DOT allocation.");
             amended[_origs[i]] = _amends[i];
             emit Amended(_origs[i], _amends[i]);
         }
@@ -113,7 +116,7 @@ contract Claims is Owned {
             // Check for overflow.
             require(newVesting > oldVesting, "Overflow in addition.");
             claimData.vested = newVesting;
-            emit Vested(_eths[i], _vestingAmts[i]);
+            emit VestedIncreased(_eths[i], newVesting);
         }
     }
 
@@ -181,6 +184,15 @@ contract Claims is Owned {
         return claims[_eth].pubKey != bytes32(0);
     }
 
+    /// Get whether an address has an allocation.
+    /// @return bool True if has a balance of FrozenToken.
+    function hasAllocation(address _eth)
+        public view returns (bool)
+    {
+        uint bal = allocationIndicator.balanceOf(_eth);
+        return bal > 0;
+    }
+
     /// Assings an index to an allocation address.
     /// @dev Public function.
     /// @param _eth The allocation address.
@@ -201,11 +213,7 @@ contract Claims is Owned {
 
     /// @dev Requires that `_eth` address has DOT allocation.
     modifier has_allocation(address _eth) {
-        uint bal = allocationIndicator.balanceOf(_eth);
-        require(
-            bal > 0,
-            "Ethereum address has no DOT allocation."
-        );
+        require(hasAllocation(_eth), "Ethereum address has no DOT allocation.");
         _;
     }
 
