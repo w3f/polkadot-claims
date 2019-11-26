@@ -35,6 +35,10 @@ contract Claims is Owned {
     // A mapping from pubkey to the sale amount from second sale.
     mapping (bytes32 => uint) public saleAmounts;
 
+    // A mapping of pubkeys => an array of ethereum addresses that have made a claim for this pubkey.
+    // - Used for getting the balance. 
+    mapping (bytes32 => address[]) public claimsForPubkey;
+
     // Addresses that already claimed so we can easily grab them from state.
     address[] public claimed;
 
@@ -159,6 +163,14 @@ contract Claims is Owned {
     }
 
     function balanceOfPubkey(bytes32 _who) public view returns (uint) {
+        address[] storage frozenTokenHolders = claimsForPubkey[_who];
+        if (frozenTokenHolders.length > 0) {
+            uint total;
+            for (uint i = 0; i < frozenTokenHolders.length; i++) {
+                total += balanceOf(frozenTokenHolders[i]);
+            }
+            return total + saleAmounts[_who];
+        }
         return saleAmounts[_who];
     }
 
@@ -206,14 +218,9 @@ contract Claims is Owned {
 
         claims[_eth].pubKey = _pubKey;
         claimed.push(_eth);
+        claimsForPubkey[_pubKey].push(_eth);
 
         emit Claimed(_eth, _pubKey, claims[_eth].index);
-    }
-
-    function claimTwo(address _eth, bytes32 _pubkey)
-        external
-    {
-
     }
 
     /// Get the length of `claimed`.
