@@ -7,12 +7,6 @@ import "./FrozenToken.sol";
 ///         Allows allocations to be claimed to Polkadot public keys.
 contract Claims is Owned {
 
-    // TMP
-    string public constant name = "DOT Allocation Indicator";
-    string public constant symbol = "DOT";
-    uint8 public constant decimals = 3;
-    // end TMP
-
     // The maximum number contained by the type `uint`. Used to freeze the contract from claims.
     uint constant public UINT_MAX =  115792089237316195423570985008687907853269984665640564039457584007913129639935;
 
@@ -158,9 +152,9 @@ contract Claims is Owned {
         }
     }
 
-    function balanceOf(address _who) public view returns (uint) {
-        return allocationIndicator.balanceOf(_who);
-    }
+    // function balanceOf(address _who) public view returns (uint) {
+    //     return allocationIndicator.balanceOf(_who);
+    // }
 
     function balanceOfPubkey(bytes32 _who) public view returns (uint) {
         address[] storage frozenTokenHolders = claimsForPubkey[_who];
