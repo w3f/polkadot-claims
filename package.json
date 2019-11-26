@@ -7,13 +7,14 @@
   },
   "name": "polkadot-claims",
   "description": "A smart contract that allows the Ethereum address associated with a DOT allocation to claim that allocation to a specified Polkadot address.",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "main": "truffle-config.js",
   "directories": {
     "test": "test"
   },
   "scripts": {
     "build": "truffle build",
+    "migrate:dev": "truffle migrate",
     "test": "truffle test"
   },
   "repository": {
@@ -21,7 +22,7 @@
     "url": "git+https://github.com/lsaether/claims.git"
   },
   "author": "Web3 Foundation",
-  "license": "ISC",
+  "license": "GPL-3.0",
   "bugs": {
     "url": "https://github.com/lsaether/claims/issues"
   },

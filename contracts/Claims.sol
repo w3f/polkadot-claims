@@ -1,4 +1,4 @@
-pragma solidity 0.5.9;
+pragma solidity 0.5.13;
 
 import "./FrozenToken.sol";
 
@@ -6,6 +6,12 @@ import "./FrozenToken.sol";
 /// @title  Claims
 ///         Allows allocations to be claimed to Polkadot public keys.
 contract Claims is Owned {
+
+    // TMP
+    string public constant name = "DOT Allocation Indicator";
+    string public constant symbol = "DOT";
+    uint8 public constant decimals = 3;
+    // end TMP
 
     // The maximum number contained by the type `uint`. Used to freeze the contract from claims.
     uint constant public UINT_MAX =  115792089237316195423570985008687907853269984665640564039457584007913129639935;
@@ -26,6 +32,9 @@ contract Claims is Owned {
     // Maps allocations to `Claim` data.
     mapping (address => Claim) public claims;
 
+    // A mapping from pubkey to the sale amount from second sale.
+    mapping (bytes32 => uint) public saleAmounts;
+
     // Addresses that already claimed so we can easily grab them from state.
     address[] public claimed;
 
@@ -45,6 +54,8 @@ contract Claims is Owned {
     event Vested(address indexed eth, uint amount);
     // Event for when vesting is increased on an account.
     event VestedIncreased(address indexed eth, uint newTotal);
+    // Event that triggers when a new sale injection is made.
+    event InjectedSaleAmount(bytes32 indexed pubkey, uint newTotal);
 
     constructor(address _owner, address _allocations, uint _setUpDelay) public {
         require(_owner != address(0x0), "Must provide an owner address.");
@@ -120,6 +131,37 @@ contract Claims is Owned {
         }
     }
 
+    function injectSaleAmount(bytes32[] calldata _pubkeys, uint[] calldata _amounts)
+        external
+        only_owner
+    {
+        require(_pubkeys.length == _amounts.length);
+
+        for (uint i = 0; i < _pubkeys.length; i++) {
+            bytes32 pubkey = _pubkeys[i];
+            uint amount = _amounts[i];
+
+            // Checks that input is not zero.
+            require(amount > 0, "Must inject a sale vesting amount greater than zero.");
+
+            uint oldValue = saleAmounts[pubkey];
+            uint newValue = oldValue + amount;
+            // Check for overflow.
+            require(newValue > oldValue, "Overflow in addition");
+            saleAmounts[pubkey] = amount;
+
+            emit InjectedSaleAmount(pubkey, amount);
+        }
+    }
+
+    function balanceOf(address _who) public view returns (uint) {
+        return allocationIndicator.balanceOf(_who);
+    }
+
+    function balanceOfPubkey(bytes32 _who) public view returns (uint) {
+        return saleAmounts[_who];
+    }
+
     /// Freezes the contract from any further claims.
     /// @dev Protected by the `only_owner` modifier.
     function freeze() external only_owner {
@@ -166,6 +208,12 @@ contract Claims is Owned {
         claimed.push(_eth);
 
         emit Claimed(_eth, _pubKey, claims[_eth].index);
+    }
+
+    function claimTwo(address _eth, bytes32 _pubkey)
+        external
+    {
+
     }
 
     /// Get the length of `claimed`.
