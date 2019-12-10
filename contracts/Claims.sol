@@ -140,7 +140,7 @@ contract Claims is Owned {
             uint amount = _amounts[i];
 
             // Checks that input is not zero.
-            require(amount > 0, "Must inject a sale vesting amount greater than zero.");
+            require(amount > 0, "Must inject a sale amount greater than zero.");
 
             uint oldValue = saleAmounts[pubkey];
             uint newValue = oldValue + amount;
@@ -151,10 +151,6 @@ contract Claims is Owned {
             emit InjectedSaleAmount(pubkey, amount);
         }
     }
-
-    // function balanceOf(address _who) public view returns (uint) {
-    //     return allocationIndicator.balanceOf(_who);
-    // }
 
     function balanceOfPubkey(bytes32 _who) public view returns (uint) {
         address[] storage frozenTokenHolders = claimsForPubkey[_who];
