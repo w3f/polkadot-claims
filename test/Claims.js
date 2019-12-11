@@ -484,7 +484,17 @@ contract('Claims', accounts => {
     expect(balAfter.toString()).to.equal('32345');
   });
 
-  it('Allows for injections and for stackable injections', async () => {
+  it('Invariant: Does not allow anyone but owner to inject sale amounts', async () => {
+    const pAddr = getPolkadotAddress('Elizabeth Holmes');
+    const pubkey = u8aToHex(decodeAddress(pAddr));
+
+    assertRevert(
+      claims.injectSaleAmount([pubkey], ['12345'], { from: accounts[5] }),
+      'Only owner',
+    );
+  });
+
+  it('Allows for sale injections and for stackable sale injections', async () => {
     const pAddr = getPolkadotAddress('Bob Marley');
     const pubkey = u8aToHex(decodeAddress(pAddr));
 
@@ -500,5 +510,16 @@ contract('Claims', accounts => {
 
     const balAfter = await claims.balanceOfPubkey(pubkey);
     expect(balAfter.toString()).to.equal('72');
+
+    // Do it again for redundancy.
+    const resAgain = await claims.injectSaleAmount(
+      [pubkey,pubkey],
+      ['12', '24'],
+      { from: accounts[0] },
+    );
+    expect(resAgain.receipt).to.exist;
+
+    const balAgain = await claims.balanceOfPubkey(pubkey);
+    expect(balAgain.toString()).to.equal('108');
   });
 });
