@@ -129,6 +129,9 @@ contract Claims is Owned {
         }
     }
 
+    /// Allows owner to increase the `saleAmount` for a pubkey by the injected amount.
+    /// @param _pubkeys The public keys that will have their balances increased.
+    /// @param _amounts The amounts to increase the balance of pubkeys.
     function injectSaleAmount(bytes32[] calldata _pubkeys, uint[] calldata _amounts)
         external
         only_owner
@@ -152,6 +155,8 @@ contract Claims is Owned {
         }
     }
 
+    /// A helper function that allows anyone to check the balances of public keys.
+    /// @param _who The public key to check the balance of.
     function balanceOfPubkey(bytes32 _who) public view returns (uint) {
         address[] storage frozenTokenHolders = claimsForPubkey[_who];
         if (frozenTokenHolders.length > 0) {
