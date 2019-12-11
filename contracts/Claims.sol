@@ -157,7 +157,7 @@ contract Claims is Owned {
         if (frozenTokenHolders.length > 0) {
             uint total;
             for (uint i = 0; i < frozenTokenHolders.length; i++) {
-                total += balanceOf(frozenTokenHolders[i]);
+                total += allocationIndicator.balanceOf(frozenTokenHolders[i]);
             }
             return total + saleAmounts[_who];
         }
