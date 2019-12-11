@@ -389,6 +389,12 @@ contract('Claims', accounts => {
     // Check index incremented for sanity reasonz.
     const curIdx = await claims.nextIndex();
     expect(curIdx.toString()).to.equal('4');
+
+    // Check that the claimsForPubkey mapping has updated.
+    const firstClaim = await claims.claimsForPubkey(pubkey, 0);
+    expect(firstClaim).to.equal(accounts[2]);
+    const secondClaim = await claims.claimsForPubkey(pubkey, 1);
+    expect(secondClaim).to.equal(accounts[5]);
   })
 
   it('Allows owner to increaseVesting on an already claimed address', async () => {
