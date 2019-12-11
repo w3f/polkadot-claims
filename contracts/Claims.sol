@@ -146,9 +146,9 @@ contract Claims is Owned {
             uint newValue = oldValue + amount;
             // Check for overflow.
             require(newValue > oldValue, "Overflow in addition");
-            saleAmounts[pubkey] = amount;
+            saleAmounts[pubkey] = newValue;
 
-            emit InjectedSaleAmount(pubkey, amount);
+            emit InjectedSaleAmount(pubkey, newValue);
         }
     }
 

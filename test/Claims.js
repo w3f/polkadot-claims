@@ -483,4 +483,22 @@ contract('Claims', accounts => {
     const balAfter = await claims.balanceOfPubkey(pubkey);
     expect(balAfter.toString()).to.equal('32345');
   });
+
+  it('Allows for injections and for stackable injections', async () => {
+    const pAddr = getPolkadotAddress('Bob Marley');
+    const pubkey = u8aToHex(decodeAddress(pAddr));
+
+    const balBefore = await claims.balanceOfPubkey(pubkey);
+    expect(balBefore.toString()).to.equal('0');
+
+    const res = await claims.injectSaleAmount(
+      [pubkey,pubkey,pubkey],
+      ['12', '24', '36'],
+      { from: accounts[0] },
+    );
+    expect(res.receipt).to.exist;
+
+    const balAfter = await claims.balanceOfPubkey(pubkey);
+    expect(balAfter.toString()).to.equal('72');
+  });
 });
