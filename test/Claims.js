@@ -97,7 +97,7 @@ contract('Claims', accounts => {
     deployGas(frozenToken, 'Frozen Token');
 
     // Set up the token with a bunch of balances.
-    let nSends = 4;
+    let nSends = 5;
     const makeSends = async (num) => {
 
       let i = 1;
@@ -369,6 +369,34 @@ contract('Claims', accounts => {
     expect(curIdx.toString()).to.equal('3');
   });
 
+  it('Allows a claim to the same polkadot public key', async () => {
+    // This is the same as we use for above.
+    const pAddr = getPolkadotAddress('Bob');
+    const pubkey = u8aToHex(decodeAddress(pAddr));
+    const txResult = await claims.claim(
+      accounts[5],
+      pubkey,
+      { from: accounts[5] },
+    );
+    expect(txResult.receipt).to.exist;
+    const event = findEventFromReceipt(txResult.receipt, 'Claimed');
+    expect(event).to.exist;
+    const { eth, dot, idx } = event.args;
+    expect(eth).to.equal(accounts[5]);
+    expect(dot).to.equal(pubkey);
+    expect(idx.toString()).to.equal('3');
+
+    // Check index incremented for sanity reasonz.
+    const curIdx = await claims.nextIndex();
+    expect(curIdx.toString()).to.equal('4');
+
+    // Check that the claimsForPubkey mapping has updated.
+    const firstClaim = await claims.claimsForPubkey(pubkey, 0);
+    expect(firstClaim).to.equal(accounts[2]);
+    const secondClaim = await claims.claimsForPubkey(pubkey, 1);
+    expect(secondClaim).to.equal(accounts[5]);
+  })
+
   it('Allows owner to increaseVesting on an already claimed address', async () => {
     const claimData = await claims.claims(accounts[2]);
     expect(claimData.vested.toString()).to.equal('1');
@@ -433,6 +461,65 @@ contract('Claims', accounts => {
     expect(claimData2.pubKey).to.equal(u8aToHex(decodeAddress(getPolkadotAddress('Bob'))));
     expect(claimData2.vested.toString()).to.equal('2');
     const len = await claims.claimedLength();
-    expect(len.toString()).to.equal('3');
+    expect(len.toString()).to.equal('4');
+  });
+
+  it('Calculates balance of pubkey correctly', async () => {
+    const pAddr = getPolkadotAddress('Bob');
+    const pubkey = u8aToHex(decodeAddress(pAddr));
+
+    const balBefore = await claims.balanceOfPubkey(pubkey);
+    // The value is gotten because there are two claims each for 10_000.
+    expect(balBefore.toString()).to.equal('20000');
+
+    // Now let's inject a second sale amount...
+    const txResult = await claims.injectSaleAmount(
+      [pubkey],
+      ['12345'],
+      { from: accounts[0] },
+    );
+    expect(txResult.receipt).to.exist;
+
+    const balAfter = await claims.balanceOfPubkey(pubkey);
+    expect(balAfter.toString()).to.equal('32345');
+  });
+
+  it('Invariant: Does not allow anyone but owner to inject sale amounts', async () => {
+    const pAddr = getPolkadotAddress('Elizabeth Holmes');
+    const pubkey = u8aToHex(decodeAddress(pAddr));
+
+    assertRevert(
+      claims.injectSaleAmount([pubkey], ['12345'], { from: accounts[5] }),
+      'Only owner',
+    );
+  });
+
+  it('Allows for sale injections and for stackable sale injections', async () => {
+    const pAddr = getPolkadotAddress('Bob Marley');
+    const pubkey = u8aToHex(decodeAddress(pAddr));
+
+    const balBefore = await claims.balanceOfPubkey(pubkey);
+    expect(balBefore.toString()).to.equal('0');
+
+    const res = await claims.injectSaleAmount(
+      [pubkey,pubkey,pubkey],
+      ['12', '24', '36'],
+      { from: accounts[0] },
+    );
+    expect(res.receipt).to.exist;
+
+    const balAfter = await claims.balanceOfPubkey(pubkey);
+    expect(balAfter.toString()).to.equal('72');
+
+    // Do it again for redundancy.
+    const resAgain = await claims.injectSaleAmount(
+      [pubkey,pubkey],
+      ['12', '24'],
+      { from: accounts[0] },
+    );
+    expect(resAgain.receipt).to.exist;
+
+    const balAgain = await claims.balanceOfPubkey(pubkey);
+    expect(balAgain.toString()).to.equal('108');
   });
 });

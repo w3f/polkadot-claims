@@ -1,4 +1,4 @@
-pragma solidity 0.5.9;
+pragma solidity 0.5.13;
 
 import "./FrozenToken.sol";
 
@@ -26,6 +26,13 @@ contract Claims is Owned {
     // Maps allocations to `Claim` data.
     mapping (address => Claim) public claims;
 
+    // A mapping from pubkey to the sale amount from second sale.
+    mapping (bytes32 => uint) public saleAmounts;
+
+    // A mapping of pubkeys => an array of ethereum addresses that have made a claim for this pubkey.
+    // - Used for getting the balance. 
+    mapping (bytes32 => address[]) public claimsForPubkey;
+
     // Addresses that already claimed so we can easily grab them from state.
     address[] public claimed;
 
@@ -45,6 +52,8 @@ contract Claims is Owned {
     event Vested(address indexed eth, uint amount);
     // Event for when vesting is increased on an account.
     event VestedIncreased(address indexed eth, uint newTotal);
+    // Event that triggers when a new sale injection is made.
+    event InjectedSaleAmount(bytes32 indexed pubkey, uint newTotal);
 
     constructor(address _owner, address _allocations, uint _setUpDelay) public {
         require(_owner != address(0x0), "Must provide an owner address.");
@@ -120,6 +129,46 @@ contract Claims is Owned {
         }
     }
 
+    /// Allows owner to increase the `saleAmount` for a pubkey by the injected amount.
+    /// @param _pubkeys The public keys that will have their balances increased.
+    /// @param _amounts The amounts to increase the balance of pubkeys.
+    function injectSaleAmount(bytes32[] calldata _pubkeys, uint[] calldata _amounts)
+        external
+        only_owner
+    {
+        require(_pubkeys.length == _amounts.length);
+
+        for (uint i = 0; i < _pubkeys.length; i++) {
+            bytes32 pubkey = _pubkeys[i];
+            uint amount = _amounts[i];
+
+            // Checks that input is not zero.
+            require(amount > 0, "Must inject a sale amount greater than zero.");
+
+            uint oldValue = saleAmounts[pubkey];
+            uint newValue = oldValue + amount;
+            // Check for overflow.
+            require(newValue > oldValue, "Overflow in addition");
+            saleAmounts[pubkey] = newValue;
+
+            emit InjectedSaleAmount(pubkey, newValue);
+        }
+    }
+
+    /// A helper function that allows anyone to check the balances of public keys.
+    /// @param _who The public key to check the balance of.
+    function balanceOfPubkey(bytes32 _who) public view returns (uint) {
+        address[] storage frozenTokenHolders = claimsForPubkey[_who];
+        if (frozenTokenHolders.length > 0) {
+            uint total;
+            for (uint i = 0; i < frozenTokenHolders.length; i++) {
+                total += allocationIndicator.balanceOf(frozenTokenHolders[i]);
+            }
+            return total + saleAmounts[_who];
+        }
+        return saleAmounts[_who];
+    }
+
     /// Freezes the contract from any further claims.
     /// @dev Protected by the `only_owner` modifier.
     function freeze() external only_owner {
@@ -164,6 +213,7 @@ contract Claims is Owned {
 
         claims[_eth].pubKey = _pubKey;
         claimed.push(_eth);
+        claimsForPubkey[_pubKey].push(_eth);
 
         emit Claimed(_eth, _pubKey, claims[_eth].index);
     }
